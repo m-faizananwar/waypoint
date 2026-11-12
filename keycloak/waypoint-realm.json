@@ -1,0 +1,68 @@
+{
+  "realm": "waypoint",
+  "enabled": true,
+  "accessTokenLifespan": 900,
+  "roles": {
+    "realm": [
+      { "name": "requester", "description": "Can submit requests and see their own" },
+      { "name": "approver", "description": "Can see all requests and approve or reject them" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "waypoint-api",
+      "name": "Waypoint API (resource server)",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "local-dev-only",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false
+    },
+    {
+      "clientId": "waypoint-web",
+      "name": "Waypoint web and CLI (public client)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:3001/*"],
+      "webOrigins": ["http://localhost:3001"],
+      "attributes": { "pkce.code.challenge.method": "S256" },
+      "protocolMappers": [
+        {
+          "name": "waypoint-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "waypoint-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "alice",
+      "email": "alice@example.com",
+      "firstName": "Alice",
+      "lastName": "Requester",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "alice-local-dev", "temporary": false }],
+      "realmRoles": ["requester", "default-roles-waypoint"]
+    },
+    {
+      "username": "bob",
+      "email": "bob@example.com",
+      "firstName": "Bob",
+      "lastName": "Approver",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "bob-local-dev", "temporary": false }],
+      "realmRoles": ["requester", "approver", "default-roles-waypoint"]
+    }
+  ]
+}

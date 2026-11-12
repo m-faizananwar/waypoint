@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RequestStatus {
+  SUBMITTED
+  TRIAGING
+  AWAITING_APPROVAL
+  APPROVED
+  REJECTED
+  TRIAGE_FAILED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+/// A request someone submits for the operations team. AI triage only proposes
+/// a category, priority and team. Nothing is applied until an approver decides.
+model Request {
+  id             String        @id @default(uuid()) @db.Uuid
+  title          String        @db.VarChar(200)
+  body           String
+  requesterId    String
+  requesterEmail String?
+  idempotencyKey String        @db.VarChar(100)
+  status         RequestStatus @default(SUBMITTED)
+
+  // Applied fields, set only on approval
+  category String?
+  priority Priority?
+  team     String?
+
+  // What the model proposed, kept as evidence next to what was applied
+  proposal      Json?
+  proposalModel String?
+  needsReview   Boolean @default(false)
+
+  decidedBy    String?
+  decidedAt    DateTime?
+  decisionNote String?
+
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  events    AuditEvent[]
+
+  @@unique([requesterId, idempotencyKey])
+  @@index([status, createdAt])
+  @@index([requesterId, createdAt])
+}
+
+model AuditEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  requestId String   @db.Uuid
+  request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  actor     String
+  action    String
+  data      Json?
+  createdAt DateTime @default(now())
+
+  @@index([requestId, createdAt])
+}

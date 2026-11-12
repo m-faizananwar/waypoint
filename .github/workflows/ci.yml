@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: waypoint
+          POSTGRES_PASSWORD: waypoint
+          POSTGRES_DB: waypoint
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U waypoint" --health-interval 3s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 3s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://waypoint:waypoint@localhost:5432/waypoint
+      REDIS_URL: redis://localhost:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+      - name: Typecheck
+        run: npm run lint
+      - name: Unit tests
+        run: npm test
+      - name: End-to-end tests (real Postgres and Redis)
+        run: npm run test:e2e
+      - name: Docker image builds
+        run: docker build -t waypoint:ci .
